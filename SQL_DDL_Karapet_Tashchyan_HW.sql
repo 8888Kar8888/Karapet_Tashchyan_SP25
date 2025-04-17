@@ -187,53 +187,84 @@ ON CONFLICT (Email) DO NOTHING;
 INSERT INTO elitehireschema.jobopenings(employer_id, job_name, Num_of_applicants, Status, expected_experience)
 SELECT 1, 'Junior Java Developer', 2, 'Open', 1
 WHERE NOT EXISTS (
-    SELECT 1 FROM elitehireschema.jobopenings WHERE job_name = 'Junior Java Developer'
+    SELECT 1 FROM elitehireschema.jobopenings WHERE lower(job_name) = 'junior java developer' and employer_id = 1
 );
 
 INSERT INTO elitehireschema.jobopenings(employer_id, job_name, Num_of_applicants, Status, expected_experience)
 SELECT 2, 'Database Developer', 0, 'Closed', 3
 WHERE NOT EXISTS (
-    SELECT 1 FROM elitehireschema.jobopenings WHERE job_name = 'Database Developer'
+    SELECT 1 FROM elitehireschema.jobopenings WHERE lower(job_name) = 'database developer'
 );
 
+select * from elitehireschema.jobopenings
 update elitehireschema.jobopenings
-set status = 'Open' where job_id = 2;
+set status = 'Open' where lower(job_name)='database developer';
 
 update elitehireschema.jobopenings
-set employer_id = 2 where job_id = 1;
+set employer_id = 2 where lower(job_name) = 'junior java developer';
 
 update elitehireschema.jobopenings
-set Num_of_applicants = 1 where job_id in (1,2);
+set Num_of_applicants = 1 where lower(job_name) in ('junior java developer','database developer');
 
 update  elitehireschema.jobopenings 
-set opening_date = '2024-07-06' where job_id in (1,2);
+set opening_date = '2024-07-06'where lower(job_name) in ('junior java developer','database developer');
 
 INSERT INTO elitehireschema.applicants(Name, Surname, Gender, Email, Opening_date, Experience)
 SELECT 'Khachatur', 'Khachatryan', 'M', 'Khachkhachat@gmail.com', '2024-06-06', 3
 WHERE NOT EXISTS (
-    SELECT 1 FROM elitehireschema.applicants WHERE Email = 'Khachkhachat@gmail.com'
+    SELECT 1 FROM elitehireschema.applicants WHERE lower(Email) = 'khachkhachat@gmail.com'
 );
 
 INSERT INTO elitehireschema.applicants(Name, Surname, Gender, Email, Opening_date, Experience)
 SELECT 'Vzg', 'Vzgyan', 'M', 'vzvzg@gmail.com', '2023-05-04', 1
 WHERE NOT EXISTS (
-    SELECT 1 FROM elitehireschema.applicants WHERE Email = 'vzvzg@gmail.com'
+    SELECT 1 FROM elitehireschema.applicants WHERE lower(Email) = 'vzvzg@gmail.com'
 );
+
+
 
 INSERT INTO elitehireschema.JobApplicants(applicant_id, job_id, status)
-SELECT 1, 2, 'Accepted'
-WHERE NOT EXISTS (
-    SELECT 1 FROM elitehireschema.JobApplicants WHERE applicant_id = 1 AND job_id = 2
+SELECT a.applicant_id, j.job_id, 'Accepted'
+FROM elitehireschema.applicants a
+JOIN elitehireschema.jobopenings j ON 1=1
+WHERE lower(a.email) = 'khachkhachat@gmail.com'
+  AND j.opening_date = '2024-07-06'
+  AND lower(j.job_name) = 'database developer'
+  AND NOT EXISTS (
+    SELECT 1 
+    FROM elitehireschema.JobApplicants ja
+    WHERE ja.applicant_id = a.applicant_id 
+      AND ja.job_id = j.job_id
+      AND lower(ja.status) = 'accepted'
 );
+
+
 
 INSERT INTO elitehireschema.JobApplicants(applicant_id, job_id, status)
-SELECT 2, 1, 'Accepted'
-WHERE NOT EXISTS (
-    SELECT 1 FROM elitehireschema.JobApplicants WHERE applicant_id = 2 AND job_id = 1
+SELECT a.applicant_id, j.job_id, 'Accepted'
+FROM elitehireschema.applicants a
+JOIN elitehireschema.jobopenings j ON 1=1
+WHERE lower(a.email) = 'vzvzg@gmail.com'
+  AND j.opening_date = '2024-07-06'
+  AND lower(j.job_name) = 'junior java developer'
+  AND NOT EXISTS (
+    SELECT 1
+    FROM elitehireschema.JobApplicants ja
+    WHERE ja.applicant_id = a.applicant_id 
+      AND ja.job_id = j.job_id
+      AND lower(ja.status) = 'accepted'
 );
 
-update elitehireschema.JobApplicants 
-set application_date = '2024-07-26' where applicant_id in (1,2);
+
+UPDATE elitehireschema.JobApplicants ja
+SET application_date = '2024-07-26'
+FROM elitehireschema.applicants a
+JOIN elitehireschema.jobopenings j ON 1=1
+WHERE ja.applicant_id = a.applicant_id
+  AND ja.job_id = j.job_id
+  AND lower(a.email) IN ('khachkhachat@gmail.com', 'vzvzg@gmail.com');
+
+
 
 INSERT INTO EliteHireSchema.JobSkills(Skill_name)
 VALUES 
@@ -247,177 +278,226 @@ VALUES
   ('Javascript')
 ON CONFLICT DO NOTHING;
 
-insert into EliteHireSchema.Interviews(job_id,Applicant_ID,Recruiter_ID,Stage,Feedback,Scheduled_Date,Time)
-values(1,2,2,'HR','Approved','2024-08-01','15:00'),
-(2,1,2,'HR','Approved','2024-08-01','14:30');
+INSERT INTO EliteHireSchema.Interviews(job_id, applicant_id, recruiter_id, stage, feedback, scheduled_date, time)
+SELECT j.job_id, a.applicant_id, e.employee_id, 'HR', 'Approved', DATE '2024-08-01', TIME '15:00'
+FROM elitehireschema.jobopenings j
+JOIN elitehireschema.applicants a ON lower(a.email) = 'vzvzg@gmail.com'
+JOIN elitehireschema.employees e ON lower(e.email) = 'vzgkhach@gmail.com'
+WHERE lower(j.job_name) = 'junior java developer'
+  AND NOT EXISTS (
+    SELECT 1
+    FROM EliteHireSchema.Interviews i
+    WHERE i.job_id = j.job_id
+      AND i.applicant_id = a.applicant_id
+      AND i.recruiter_id = e.employee_id
+  );
 
 
-INSERT INTO EliteHireSchema.Interviews(job_id, Applicant_ID, Recruiter_ID, Stage, Feedback, Scheduled_Date, Time)
-SELECT 1, 2, 2, 'HR', 'Approved', '2024-08-01', '15:00'
-WHERE NOT EXISTS (
-    SELECT 1 FROM EliteHireSchema.Interviews 
-    WHERE job_id = 1 AND applicant_id = 2 AND recruiter_id = 2 AND Stage = 'HR'
-);
 
-INSERT INTO EliteHireSchema.Interviews(job_id, Applicant_ID, Recruiter_ID, Stage, Feedback, Scheduled_Date, Time)
-SELECT 2, 1, 2, 'HR', 'Approved', '2024-08-01', '14:30'
-WHERE NOT EXISTS (
-    SELECT 1 FROM EliteHireSchema.Interviews 
-    WHERE job_id = 2 AND applicant_id = 1 AND recruiter_id = 2 AND Stage = 'HR'
-);
+INSERT INTO EliteHireSchema.Interviews(job_id, applicant_id, recruiter_id, stage, feedback, scheduled_date, time)
+SELECT j.job_id, a.applicant_id, e.employee_id, 'HR', 'Approved', DATE '2024-08-01', TIME '14:30'
+FROM elitehireschema.jobopenings j
+JOIN elitehireschema.applicants a ON lower(a.email) = 'khachkhachat@gmail.com'
+JOIN elitehireschema.employees e ON lower(e.email) = 'vzgkhach@gmail.com'
+WHERE lower(j.job_name) = 'database developer'
+  AND NOT EXISTS (
+    SELECT 1
+    FROM EliteHireSchema.Interviews i
+    WHERE i.job_id = j.job_id
+      AND i.applicant_id = a.applicant_id
+      AND i.recruiter_id = e.employee_id
+  );
+
+
+
 
 INSERT INTO EliteHireSchema.services (Job_opening_id, Person_email, Service_type, Start_date, End_date, Status)
-SELECT 1, 'vzvzg@gmail.com', 'Interview Coaching', '2024-07-27', '2024-07-28', 'Completed'
-WHERE NOT EXISTS (
-    SELECT 1 FROM EliteHireSchema.Services WHERE Person_email = 'vzvzg@gmail.com'
-);
+SELECT j.job_id, a.email, 'Interview Coaching', DATE '2024-07-27', DATE '2024-07-28', 'Completed'
+FROM elitehireschema.jobopenings j
+JOIN elitehireschema.applicants a ON lower(a.email) = 'vzvzg@gmail.com'
+WHERE lower(j.job_name) = 'junior java developer'
+  AND NOT EXISTS (
+    SELECT 1
+    FROM EliteHireSchema.Services s
+    WHERE s.job_opening_id = j.job_id
+      AND lower(s.person_email) = lower(a.email)
+      AND lower(s.service_type) = 'interview coaching'
+  );
+
+
 
 INSERT INTO EliteHireSchema.services (Job_opening_id, Person_email, Service_type, Start_date, End_date, Status)
-SELECT 2, 'Khachkhachat@gmail.com', 'Interview Coaching', '2024-07-28', '2024-07-29', 'Completed'
-WHERE NOT EXISTS (
-    SELECT 1 FROM EliteHireSchema.Services WHERE Person_email = 'Khachkhachat@gmail.com'
-);
+SELECT j.job_id, a.email, 'Interview Coaching', DATE '2024-07-28', DATE '2024-07-29', 'Completed'
+FROM elitehireschema.jobopenings j
+JOIN elitehireschema.applicants a ON lower(a.email) = 'khachkhachat@gmail.com'
+WHERE lower(j.job_name) = 'database developer'
+  AND NOT EXISTS (
+    SELECT 1
+    FROM EliteHireSchema.Services s
+    WHERE s.job_opening_id = j.job_id
+      AND lower(s.person_email) = lower(a.email)
+      AND lower(s.service_type) = 'interview coaching'
+  );
 
--- Job_ID 1
-INSERT INTO elitehireschema.jobopeningskills(Job_ID, Job_Skills_ID)
-SELECT 1, 1 WHERE NOT EXISTS (
-    SELECT 1 FROM elitehireschema.jobopeningskills WHERE Job_ID = 1 AND Job_Skills_ID = 1
-);
 
-INSERT INTO elitehireschema.jobopeningskills(Job_ID, Job_Skills_ID)
-SELECT 1, 5 WHERE NOT EXISTS (
-    SELECT 1 FROM elitehireschema.jobopeningskills WHERE Job_ID = 1 AND Job_Skills_ID = 5
-);
 
-INSERT INTO elitehireschema.jobopeningskills(Job_ID, Job_Skills_ID)
-SELECT 1, 6 WHERE NOT EXISTS (
-    SELECT 1 FROM elitehireschema.jobopeningskills WHERE Job_ID = 1 AND Job_Skills_ID = 6
-);
-
--- Job_ID 2
-INSERT INTO elitehireschema.jobopeningskills(Job_ID, Job_Skills_ID)
-SELECT 2, 2 WHERE NOT EXISTS (
-    SELECT 1 FROM elitehireschema.jobopeningskills WHERE Job_ID = 2 AND Job_Skills_ID = 2
-);
 
 INSERT INTO elitehireschema.jobopeningskills(Job_ID, Job_Skills_ID)
-SELECT 2, 4 WHERE NOT EXISTS (
-    SELECT 1 FROM elitehireschema.jobopeningskills WHERE Job_ID = 2 AND Job_Skills_ID = 4
-);
+SELECT j.job_id, s.job_skills_id
+FROM elitehireschema.jobopenings j
+JOIN elitehireschema.jobskills s ON s.skill_name IN ('Java', 'OOP', 'Data Structures')
+WHERE lower(j.job_name) = 'junior java developer'
+  AND NOT EXISTS (
+    SELECT 1 
+    FROM elitehireschema.jobopeningskills jos 
+    WHERE jos.job_id = j.job_id 
+      AND jos.job_skills_id = s.job_skills_id
+  );
 
 INSERT INTO elitehireschema.jobopeningskills(Job_ID, Job_Skills_ID)
-SELECT 2, 7 WHERE NOT EXISTS (
-    SELECT 1 FROM elitehireschema.jobopeningskills WHERE Job_ID = 2 AND Job_Skills_ID = 7
-);
-
-
--- Applicant_ID 1
-INSERT INTO elitehireschema.applicantskills(Applicant_ID, Job_Skills_ID)
-SELECT 1, 2 WHERE NOT EXISTS (
-    SELECT 1 FROM elitehireschema.applicantskills WHERE Applicant_ID = 1 AND Job_Skills_ID = 2
-);
-
-INSERT INTO elitehireschema.applicantskills(Applicant_ID, Job_Skills_ID)
-SELECT 1, 4 WHERE NOT EXISTS (
-    SELECT 1 FROM elitehireschema.applicantskills WHERE Applicant_ID = 1 AND Job_Skills_ID = 4
-);
+SELECT j.job_id, s.job_skills_id
+FROM elitehireschema.jobopenings j
+JOIN elitehireschema.jobskills s ON s.skill_name IN ('SQL', 'Database Modeling', 'Python')
+WHERE lower(j.job_name) = 'database developer'
+  AND NOT EXISTS (
+    SELECT 1 
+    FROM elitehireschema.jobopeningskills jos 
+    WHERE jos.job_id = j.job_id 
+      AND jos.job_skills_id = s.job_skills_id
+  );
 
 INSERT INTO elitehireschema.applicantskills(Applicant_ID, Job_Skills_ID)
-SELECT 1, 7 WHERE NOT EXISTS (
-    SELECT 1 FROM elitehireschema.applicantskills WHERE Applicant_ID = 1 AND Job_Skills_ID = 7
-);
+SELECT a.applicant_id, s.job_skills_id
+FROM elitehireschema.applicants a
+JOIN elitehireschema.jobskills s ON s.skill_name IN ('SQL', 'Database Modeling', 'Python', 'Javascript')
+WHERE lower(a.email) = 'khachkhachat@gmail.com'
+  AND NOT EXISTS (
+    SELECT 1 
+    FROM elitehireschema.applicantskills ak
+    WHERE ak.applicant_id = a.applicant_id AND ak.job_skills_id = s.job_skills_id
+  );
 
 INSERT INTO elitehireschema.applicantskills(Applicant_ID, Job_Skills_ID)
-SELECT 1, 8 WHERE NOT EXISTS (
-    SELECT 1 FROM elitehireschema.applicantskills WHERE Applicant_ID = 1 AND Job_Skills_ID = 8
-);
-
--- Applicant_ID 2
-INSERT INTO elitehireschema.applicantskills(Applicant_ID, Job_Skills_ID)
-SELECT 2, 1 WHERE NOT EXISTS (
-    SELECT 1 FROM elitehireschema.applicantskills WHERE Applicant_ID = 2 AND Job_Skills_ID = 1
-);
-
-INSERT INTO elitehireschema.applicantskills(Applicant_ID, Job_Skills_ID)
-SELECT 2, 5 WHERE NOT EXISTS (
-    SELECT 1 FROM elitehireschema.applicantskills WHERE Applicant_ID = 2 AND Job_Skills_ID = 5
-);
-
-INSERT INTO elitehireschema.applicantskills(Applicant_ID, Job_Skills_ID)
-SELECT 2, 6 WHERE NOT EXISTS (
-    SELECT 1 FROM elitehireschema.applicantskills WHERE Applicant_ID = 2 AND Job_Skills_ID = 6
-);
-
-INSERT INTO elitehireschema.applicantskills(Applicant_ID, Job_Skills_ID)
-SELECT 2, 7 WHERE NOT EXISTS (
-    SELECT 1 FROM elitehireschema.applicantskills WHERE Applicant_ID = 2 AND Job_Skills_ID = 7
-);
+SELECT a.applicant_id, s.job_skills_id
+FROM elitehireschema.applicants a
+JOIN elitehireschema.jobskills s ON s.skill_name IN ('Java', 'OOP', 'Data Structures', 'Python')
+WHERE lower(a.email) = 'vzvzg@gmail.com'
+  AND NOT EXISTS (
+    SELECT 1 
+    FROM elitehireschema.applicantskills ak
+    WHERE ak.applicant_id = a.applicant_id AND ak.job_skills_id = s.job_skills_id
+  );
 
 
 INSERT INTO elitehireschema.jobpreferences(Job_ID, Expected_sallary, location, Remote)
-SELECT 1, 200000, 'Yerevan', FALSE WHERE NOT EXISTS (
-    SELECT 1 FROM elitehireschema.jobpreferences WHERE Job_ID = 1
-);
+SELECT j.job_id, 200000, 'Yerevan', FALSE
+FROM elitehireschema.jobopenings j
+WHERE lower(j.job_name) = 'junior java developer'
+  AND NOT EXISTS (
+    SELECT 1 FROM elitehireschema.jobpreferences jp WHERE jp.job_id = j.job_id
+  );
 
 INSERT INTO elitehireschema.jobpreferences(Job_ID, Expected_sallary, location, Remote)
-SELECT 2, 250000, 'Gyumri', FALSE WHERE NOT EXISTS (
-    SELECT 1 FROM elitehireschema.jobpreferences WHERE Job_ID = 2
-);
+SELECT j.job_id, 250000, 'Gyumri', FALSE
+FROM elitehireschema.jobopenings j
+WHERE lower(j.job_name) = 'database developer'
+  AND NOT EXISTS (
+    SELECT 1 FROM elitehireschema.jobpreferences jp WHERE jp.job_id = j.job_id
+  );
+
 
 
 INSERT INTO elitehireschema.applicantpreferences(Applicant_ID, Job_ID, Expected_salary, location, Remote)
-SELECT 1, 2, 200000, 'Gyumri', FALSE WHERE NOT EXISTS (
-    SELECT 1 FROM elitehireschema.applicantpreferences WHERE Applicant_ID = 1 AND Job_ID = 2
-);
+SELECT a.applicant_id, j.job_id, 200000, 'Gyumri', FALSE
+FROM elitehireschema.applicants a
+JOIN elitehireschema.jobopenings j ON lower(j.job_name) = 'database developer'
+WHERE lower(a.email) = 'khachkhachat@gmail.com'
+  AND NOT EXISTS (
+    SELECT 1 
+    FROM elitehireschema.applicantpreferences ap 
+    WHERE ap.applicant_id = a.applicant_id AND ap.job_id = j.job_id
+  );
 
 INSERT INTO elitehireschema.applicantpreferences(Applicant_ID, Job_ID, Expected_salary, location, Remote)
-SELECT 2, 1, 200000, 'Yerevan', FALSE WHERE NOT EXISTS (
-    SELECT 1 FROM elitehireschema.applicantpreferences WHERE Applicant_ID = 2 AND Job_ID = 1
-);
+SELECT a.applicant_id, j.job_id, 200000, 'Yerevan', FALSE
+FROM elitehireschema.applicants a
+JOIN elitehireschema.jobopenings j ON lower(j.job_name) = 'junior java developer'
+WHERE lower(a.email) = 'vzvzg@gmail.com'
+  AND NOT EXISTS (
+    SELECT 1 
+    FROM elitehireschema.applicantpreferences ap 
+    WHERE ap.applicant_id = a.applicant_id AND ap.job_id = j.job_id
+  );
 
 
-INSERT INTO EliteHireSchema.Interviews(job_id, Applicant_ID, Recruiter_ID, Stage, Feedback, Scheduled_Date, Time)
-SELECT 1, 2, 2, 'Technical', 'Approved', '2024-08-03', '16:00'
-WHERE NOT EXISTS (
-    SELECT 1 FROM EliteHireSchema.Interviews
-    WHERE job_id = 1 AND applicant_id = 2 AND recruiter_id = 2 AND stage = 'Technical'
-);
 
-INSERT INTO EliteHireSchema.Interviews(job_id, Applicant_ID, Recruiter_ID, Stage, Feedback, Scheduled_Date, Time)
-SELECT 1, 2, 2, 'Final', 'Accepted ready to hire', '2024-08-06', '15:30'
-WHERE NOT EXISTS (
-    SELECT 1 FROM EliteHireSchema.Interviews
-    WHERE job_id = 1 AND applicant_id = 2 AND recruiter_id = 2 AND stage = 'Final'
-);
+INSERT INTO EliteHireSchema.Interviews(job_id, applicant_id, recruiter_id, stage, feedback, scheduled_date, time)
+SELECT j.job_id, a.applicant_id, e.employee_id, 'Technical', 'Approved', DATE '2024-08-03', TIME '16:00'
+FROM elitehireschema.jobopenings j
+JOIN elitehireschema.applicants a ON lower(a.email) = 'vzvzg@gmail.com'
+JOIN elitehireschema.employees e ON lower(e.email) = 'vzgkhach@gmail.com'
+WHERE lower(j.job_name) = 'junior java developer'
+  AND NOT EXISTS (
+    SELECT 1 FROM EliteHireSchema.Interviews i
+    WHERE i.job_id = j.job_id AND i.applicant_id = a.applicant_id AND i.recruiter_id = e.employee_id AND lower(i.stage) = 'technical'
+  );
 
-INSERT INTO EliteHireSchema.Interviews(job_id, Applicant_ID, Recruiter_ID, Stage, Feedback, Scheduled_Date, Time)
-SELECT 2, 1, 2, 'Technical', 'Approved', '2024-08-04', '14:00'
-WHERE NOT EXISTS (
-    SELECT 1 FROM EliteHireSchema.Interviews
-    WHERE job_id = 2 AND applicant_id = 1 AND recruiter_id = 2 AND stage = 'Technical'
-);
+INSERT INTO EliteHireSchema.Interviews(job_id, applicant_id, recruiter_id, stage, feedback, scheduled_date, time)
+SELECT j.job_id, a.applicant_id, e.employee_id, 'Final', 'Accepted ready to hire', DATE '2024-08-06', TIME '15:30'
+FROM elitehireschema.jobopenings j
+JOIN elitehireschema.applicants a ON lower(a.email) = 'vzvzg@gmail.com'
+JOIN elitehireschema.employees e ON lower(e.email) = 'vzgkhach@gmail.com'
+WHERE lower(j.job_name) = 'junior java developer'
+  AND NOT EXISTS (
+    SELECT 1 FROM EliteHireSchema.Interviews i
+    WHERE i.job_id = j.job_id AND i.applicant_id = a.applicant_id AND i.recruiter_id = e.employee_id AND lower(i.stage) = 'final'
+  );
 
-INSERT INTO EliteHireSchema.Interviews(job_id, Applicant_ID, Recruiter_ID, Stage, Feedback, Scheduled_Date, Time)
-SELECT 2, 1, 2, 'Final', 'Accepted ready to hire', '2024-08-05', '14:30'
-WHERE NOT EXISTS (
-    SELECT 1 FROM EliteHireSchema.Interviews
-    WHERE job_id = 2 AND applicant_id = 1 AND recruiter_id = 2 AND stage = 'Final'
-);
+
+INSERT INTO EliteHireSchema.Interviews(job_id, applicant_id, recruiter_id, stage, feedback, scheduled_date, time)
+SELECT j.job_id, a.applicant_id, e.employee_id, 'Technical', 'Approved', DATE '2024-08-04', TIME '14:00'
+FROM elitehireschema.jobopenings j
+JOIN elitehireschema.applicants a ON lower(a.email) = 'khachkhachat@gmail.com'
+JOIN elitehireschema.employees e ON lower(e.email) = 'vzgkhach@gmail.com'
+WHERE lower(j.job_name) = 'database developer'
+  AND NOT EXISTS (
+    SELECT 1 FROM EliteHireSchema.Interviews i
+    WHERE i.job_id = j.job_id AND i.applicant_id = a.applicant_id AND i.recruiter_id = e.employee_id AND lower(i.stage) = 'technical'
+  );
+
+INSERT INTO EliteHireSchema.Interviews(job_id, applicant_id, recruiter_id, stage, feedback, scheduled_date, time)
+SELECT j.job_id, a.applicant_id, e.employee_id, 'Final', 'Accepted ready to hire', DATE '2024-08-05', TIME '14:30'
+FROM elitehireschema.jobopenings j
+JOIN elitehireschema.applicants a ON lower(a.email) = 'khachkhachat@gmail.com'
+JOIN elitehireschema.employees e ON lower(e.email) = 'vzgkhach@gmail.com'
+WHERE lower(j.job_name) = 'database developer'
+  AND NOT EXISTS (
+    SELECT 1 FROM EliteHireSchema.Interviews i
+    WHERE i.job_id = j.job_id AND i.applicant_id = a.applicant_id AND i.recruiter_id = e.employee_id AND lower(i.stage) = 'final'
+  );
+
 
 
 INSERT INTO elitehireschema.placements(Applicant_ID, Job_ID, Offer_status, Start_date, Salary)
-SELECT 1, 2, 'Accepted', '2024-09-01', 200000
-WHERE NOT EXISTS (
+SELECT a.applicant_id, j.job_id, 'Accepted', DATE '2024-09-01', 200000
+FROM elitehireschema.applicants a
+JOIN elitehireschema.jobopenings j ON lower(j.job_name) = 'database developer'
+WHERE lower(a.email) = 'khachkhachat@gmail.com'
+  AND NOT EXISTS (
     SELECT 1 FROM elitehireschema.placements
-    WHERE Applicant_ID = 1 AND Job_ID = 2
-);
+    WHERE applicant_id = a.applicant_id AND job_id = j.job_id
+  );
 
 INSERT INTO elitehireschema.placements(Applicant_ID, Job_ID, Offer_status, Start_date, Salary)
-SELECT 2, 1, 'Accepted', '2024-09-01', 200000
-WHERE NOT EXISTS (
+SELECT a.applicant_id, j.job_id, 'Accepted', DATE '2024-09-01', 200000
+FROM elitehireschema.applicants a
+JOIN elitehireschema.jobopenings j ON lower(j.job_name) = 'junior java developer'
+WHERE lower(a.email) = 'vzvzg@gmail.com'
+  AND NOT EXISTS (
     SELECT 1 FROM elitehireschema.placements
-    WHERE Applicant_ID = 2 AND Job_ID = 1
-);
+    WHERE applicant_id = a.applicant_id AND job_id = j.job_id
+  );
+
 
 
 ALTER TABLE EliteHireSchema.Employees
@@ -504,18 +584,5 @@ WHERE record_ts IS NULL;
 UPDATE EliteHireSchema.ApplicantPreferences
 SET record_ts = CURRENT_DATE
 WHERE record_ts IS NULL;
-
-
-select * from elitehireschema.employees
-
-
-
-
-
-
-
-
-
-
 
 
