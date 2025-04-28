@@ -1,6 +1,6 @@
 --TaskN1
 
-DROP VIEW sales_revenue_by_category_qtr
+DROP VIEW sales_revenue_by_category_qtr;
 CREATE OR REPLACE VIEW sales_revenue_by_category_qtr AS
 SELECT c.name AS category,
        sum(p.amount) AS total_sales_revenue
@@ -23,33 +23,45 @@ ORDER BY extract(YEAR
          c.name;
 
 --TaskN2
+CREATE OR REPLACE FUNCTION get_sales_revenue_by_category_qtr(cur_quart_year text) 
+RETURNS TABLE (category text, total_sales_revenue numeric(5, 2)) AS $$
+DECLARE
+    cur_year INT;
+    cur_quarter INT;
+BEGIN
+    IF cur_quart_year !~ '^\d{4}-Q[1-4]$' THEN
+        RAISE NOTICE 'Invalid input format. Please use the format YYYY-Q1, YYYY-Q2, YYYY-Q3, YYYY-Q4.';
+        RETURN; 
+    END IF;
 
-CREATE OR REPLACE FUNCTION get_sales_revenue_by_category_qtr(cur_quart_year text) RETURNS TABLE (category text, total_sales_revenue numeric(5, 2)) AS $$
-declare cur_year int;
-declare cur_quarter int;
+    cur_year := CAST(substring(cur_quart_year FROM 1 FOR 4) AS INT);
+    cur_quarter := CAST(substring(cur_quart_year FROM 7 FOR 1) AS INT);
 
-begin
-	cur_year := cast(substring(cur_quart_year from 1 for 4) as int);
-	cur_quarter := cast(substring(cur_quart_year from 7 for 1) as int);
+    RAISE NOTICE 'Executing for Year: %, Quarter: %', cur_year, cur_quarter;
 
-	return query SELECT
-    c.name AS category,
+    RETURN QUERY 
+    SELECT
+        c.name AS category,
+        SUM(p.amount) AS total_sales_revenue
+    FROM
+        payment p
+    JOIN rental r ON p.rental_id = r.rental_id
+    JOIN inventory i ON r.inventory_id = i.inventory_id
+    JOIN film f ON i.film_id = f.film_id
+    JOIN film_category fc ON f.film_id = fc.film_id
+    JOIN category c ON fc.category_id = c.category_id
+    WHERE EXTRACT(year FROM payment_date) = cur_year 
+    AND EXTRACT(quarter FROM payment_date) = cur_quarter
+    GROUP BY
+        c.name
+    HAVING
+        SUM(p.amount) > 0;
 
-    SUM(p.amount) AS total_sales_revenue
-FROM
-    payment p
-JOIN rental r ON p.rental_id = r.rental_id
-JOIN inventory i ON r.inventory_id = i.inventory_id
-JOIN film f ON i.film_id = f.film_id
-JOIN film_category fc ON f.film_id = fc.film_id
-JOIN category c ON fc.category_id = c.category_id
-where EXTRACT(year from payment_date) = cur_year and extract(quarter from payment_date)=cur_quarter
-GROUP BY
-    c.name
-HAVING
-    SUM(p.amount) > 0;
-end;
+    RAISE NOTICE 'Query executed successfully. Check result.';
+END;
 $$ LANGUAGE PLPGSQL;
+
+SELECT * FROM get_sales_revenue_by_category_qtr('2017-Q1');
 
 
 SELECT DISTINCT rating
@@ -64,9 +76,9 @@ CREATE SCHEMA IF NOT EXISTS core;
 
 
 --TaskN3
-CREATE OR REPLACE FUNCTION core.most_popular_films_by_countries(countries TEXT[]) RETURNS TABLE ("Country" TEXT, "Film" TEXT, "Rating" mpaa_rating,
-                                                                                                                              "Language" character(20),
-                                                                                                                                         "Length" SMALLINT, "Release Year" INTEGER) AS $$
+CREATE OR REPLACE FUNCTION core.most_popular_films_by_countries(countries TEXT[]) 
+RETURNS TABLE ("Country" TEXT, "Film" TEXT, "Rating" mpaa_rating, 
+               "Language" character(20), "Length" SMALLINT, "Release Year" INTEGER) AS $$
 BEGIN
     RETURN QUERY
     WITH film_data AS (
@@ -85,8 +97,8 @@ BEGIN
         JOIN customer cu ON r.customer_id = cu.customer_id
         JOIN address a ON cu.address_id = a.address_id
         JOIN city ci ON a.city_id = ci.city_id
-        JOIN country co ON ci.country_id = co.country_id
-        WHERE co.country = ANY(countries)
+        JOIN country co ON LOWER(ci.country) = LOWER(co.country) 
+        WHERE LOWER(co.country) = ANY(ARRAY(SELECT LOWER(unnest(countries)))) 
     )
     SELECT
         country AS "Country",
@@ -99,6 +111,7 @@ BEGIN
     WHERE rank = 1;
 END;
 $$ LANGUAGE PLPGSQL;
+
 
 --TaskN4
 
@@ -136,43 +149,51 @@ $$ LANGUAGE PLPGSQL;
 
 --select * from core.films_in_stock_by_title('%love%')
  --TaskN5
-
-CREATE OR REPLACE FUNCTION new_movie(film_name TEXT, ry INTEGER DEFAULT extract(YEAR
-                                                                                FROM CURRENT_DATE), lang TEXT DEFAULT 'Klingon', rental_rate NUMERIC DEFAULT 4.99, rental_duration INTEGER DEFAULT 3, replacement_cost NUMERIC DEFAULT 19.99) RETURNS void AS $$
-DECLARE
-    lang_id INT;
+DO $$ 
 BEGIN
-    -- Check if film_name is null or empty
-    IF film_name IS NULL OR LENGTH(TRIM(film_name)) = 0 THEN
-        RAISE EXCEPTION 'Film name cannot be null or empty.';
-    END IF;
-
-    -- Check if language exists and get its ID
-    SELECT language_id INTO lang_id
-    FROM language
-    WHERE name = lang;
-
-    IF NOT FOUND THEN
-        RAISE EXCEPTION 'Language "%" not found in the language table.', lang;
-    END IF;
-
-    -- Check if the film already exists (case-insensitive)
-    IF EXISTS (SELECT 1 FROM film WHERE LOWER(title) = LOWER(film_name)) THEN
-        RAISE NOTICE 'Film "%" already exists. Skipping insert.', film_name;
+    IF EXISTS (SELECT 1 FROM pg_proc WHERE proname = 'new_movie') THEN
+        RAISE NOTICE 'Function "new_movie" already exists. Skipping creation.';
     ELSE
-        -- Insert new film with dynamic values
-        INSERT INTO film (
-            title, rental_rate, rental_duration, replacement_cost,
-            release_year, language_id
-        )
-        VALUES (
-            film_name, rental_rate, rental_duration, replacement_cost,
-            ry, lang_id
-        );
-        RAISE NOTICE 'Film "%" successfully inserted.', film_name;
+        CREATE OR REPLACE FUNCTION new_movie(
+            film_name TEXT, 
+            ry INTEGER DEFAULT EXTRACT(YEAR FROM CURRENT_DATE), 
+            lang TEXT DEFAULT 'Klingon', 
+            rental_rate NUMERIC DEFAULT 4.99, 
+            rental_duration INTEGER DEFAULT 3, 
+            replacement_cost NUMERIC DEFAULT 19.99
+        ) RETURNS void AS $$
+        DECLARE
+            lang_id INT;
+        BEGIN
+            IF film_name IS NULL OR LENGTH(TRIM(film_name)) = 0 THEN
+                RAISE EXCEPTION 'Film name cannot be null or empty.';
+            END IF;
+
+            SELECT language_id INTO lang_id
+            FROM language
+            WHERE name = lang;
+
+            IF NOT FOUND THEN
+                RAISE EXCEPTION 'Language "%" not found in the language table.', lang;
+            END IF;
+
+            IF EXISTS (SELECT 1 FROM film WHERE LOWER(title) = LOWER(film_name)) THEN
+                RAISE NOTICE 'Film "%" already exists. Skipping insert.', film_name;
+            ELSE
+                INSERT INTO film (
+                    title, rental_rate, rental_duration, replacement_cost,
+                    release_year, language_id
+                )
+                VALUES (
+                    film_name, rental_rate, rental_duration, replacement_cost,
+                    ry, lang_id
+                );
+                RAISE NOTICE 'Film "%" successfully inserted.', film_name;
+            END IF;
+        END;
+        $$ LANGUAGE PLPGSQL;
     END IF;
-END;
-$$ LANGUAGE PLPGSQL;
+END $$;
 
 
 SELECT new_movie('Inception', 2010, 'English');
