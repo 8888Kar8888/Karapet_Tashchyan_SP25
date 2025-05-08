@@ -1,6 +1,18 @@
 1. How can one restrict access to certain columns of a database table?
 You can restrict access to specific columns by creating views that only expose the desired columns, and then granting access to the view rather than the entire table.
 
+CREATE VIEW film_public AS
+SELECT film_id, title, rating
+FROM film;
+
+GRANT SELECT ON film_public TO regular_user;
+
+To ensure that regular_user cannot directly access the film table, we can revoke their permissions on the film table.
+
+REVOKE ALL ON film FROM regular_user;
+
+
+
 2. What is the difference between user identification and user authentication?
 Identification is the process of recognizing a user, usually through a username or user ID.
 Authentication is the process of verifying the user’s identity, typically through a password, biometric data, or an authentication token.
