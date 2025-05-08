@@ -1,4 +1,4 @@
--- 🧾 Subtask 2.1: Create user 'rentaluser' with password and grant only CONNECT permission
+--  Subtask 2.1: Create user 'rentaluser' with password and grant only CONNECT permission
 DO $$
 BEGIN
     IF NOT EXISTS (
@@ -11,10 +11,10 @@ END$$;
 -- Allow the user to connect to the dvdrental database
 GRANT CONNECT ON DATABASE dvdrental TO rentaluser;
 
--- 🧾 Subtask 2.2: Grant SELECT access on the 'customer' table to 'rentaluser'
+--  Subtask 2.2: Grant SELECT access on the 'customer' table to 'rentaluser'
 GRANT SELECT ON customer TO rentaluser;
 
--- 🧾 Subtask 2.3: Create a role group 'rental' and add 'rentaluser' to it
+--  Subtask 2.3: Create a role group 'rental' and add 'rentaluser' to it
 DO $$
 BEGIN
     IF NOT EXISTS (
@@ -33,7 +33,7 @@ GRANT rental TO rentaluser;
 -- Ensure 'rentaluser' inherits privileges from the 'rental' group
 ALTER ROLE rentaluser INHERIT;
 
--- 🧾 Subtask 2.4: Insert a row into 'rental' table using 'rentaluser' permissions
+--  Subtask 2.4: Insert a row into 'rental' table using 'rentaluser' permissions
 -- Insert only if this row doesn't already exist
 DO $$
 BEGIN
@@ -49,7 +49,7 @@ BEGIN
     END IF;
 END$$;
 
--- 🧾 Subtask 2.5: Update an existing rental row
+--  Subtask 2.5: Update an existing rental row
 DO $$
 BEGIN
     IF EXISTS (
@@ -61,12 +61,12 @@ BEGIN
     END IF;
 END$$;
 
--- 🧾 Subtask 2.6: Revoke INSERT permission from 'rental' role
+--  Subtask 2.6: Revoke INSERT permission from 'rental' role
 REVOKE INSERT ON rental FROM rental;
 
 -- ❌ Now, if 'rentaluser' tries to insert, it should be denied
 
--- 🧾 Subtask 2.7: Create a personalized role for a customer with rental & payment history
+--  Subtask 2.7: Create a personalized role for a customer with rental & payment history
 -- For example, for customer Mary Smith
 -- NOTE: Adjust the name if needed to match your data
 CREATE ROLE client_mary_smith;
