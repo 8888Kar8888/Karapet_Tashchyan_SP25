@@ -1,0 +1,50 @@
+Superuser Role (postgres): The postgres role has full administrative rights with all permissions enabled, including the ability to create roles, create databases, and access all tables and data.
+
+Default System Roles: Roles like pg_read_all_data, pg_write_all_data, and others are configured for monitoring and data access but do not have direct login privileges. They are designed for specific database operations (e.g., reading or writing data) without providing full access to the database.
+
+The system implements role-based access where certain roles have limited access to specific tables or data
+
+Roles such as rental are designed to access data for specific purposes (e.g., rental data) without superuser rights.
+
+
+Password policies are in place to ensure that users utilize complex passwords.
+Connections are controlled by settings in pg_hba.conf, which restrict access based on IP address, authentication method, and other criteria to prevent unauthorized external access.
+SSL/TLS encryption is used for secure client-server connections to protect data in transit.
+
+PostgreSQL is configured to log all significant activities, including role assignments, user access, and query execution, for security auditing purposes.
+The logs can be reviewed to ensure that only authorized actions are being taken.
+
+How many predefined roles do we have in the database?
+There are 15 predefined system roles in your dvdrental PostgreSQL instance.
+
+These are built-in roles provided by PostgreSQL to support specific administrative, monitoring, and operational tasks. They include:
+
+pg_database_owner
+pg_read_all_data
+pg_write_all_data
+pg_monitor
+pg_read_all_settings
+pg_read_all_stats
+pg_stat_scan_tables
+pg_read_server_files
+pg_write_server_files
+pg_execute_server_program
+pg_signal_backend
+pg_checkpoint
+pg_maintain
+pg_use_reserved_connections
+pg_create_subscription
+These roles do not have login privileges and are designed to be granted to other roles or users to allow specific access without giving full control.
+
+
+
+ Do we have roles inheritance (with example)?
+Yes,most roles (including system roles) have rolinherit = true, meaning they automatically inherit permissions from any roles they are a member of.
+
+Role rentaluser is granted the role rental.
+Both roles have rolinherit = true.
+
+GRANT rental TO rentaluser;
+SET ROLE rental;
+
+
